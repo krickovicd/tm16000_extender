@@ -399,3 +399,15 @@ void ssd1306_update_display(ssd1306_t *p, uint16_t xPos, uint16_t yPos, uint16_t
 
     ssd1306_show(p); // Update screen with each newly-drawn line
 }
+
+void ssd1306_debug_values(ssd1306_t *p, int16_t x, int16_t y)
+{
+    ssd1306_clear(p);
+    
+    char str[10];
+    sprintf(str, "%d", x);
+    ssd1306_draw_string(p, 10, 10, 1, str);
+    sprintf(str, "%d", y);
+    ssd1306_draw_string(p, 10, 20, 1, str);
+    ssd1306_show(p);
+}

@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org)
@@ -25,13 +25,139 @@
 #ifndef USB_DESCRIPTORS_H_
 #define USB_DESCRIPTORS_H_
 
-enum
+#ifdef __cplusplus
+extern "C"
 {
-  REPORT_ID_KEYBOARD = 1,
-  REPORT_ID_MOUSE,
-  REPORT_ID_CONSUMER_CONTROL,
-  REPORT_ID_GAMEPAD,
-  REPORT_ID_COUNT
-};
+#endif
+
+// Joystick Report Descriptor Template
+// with 32 buttons, 4 joysticks and 2 hat/dpad with following layout
+// | Button Map (4 bytes) | hat/DPAD (1 byte) | X | Y | Z | Slider (2 byte each) |
+#define TUD_HID_REPORT_DESC_JOYSTICK(...)                                                      \
+  HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),                                                      \
+      HID_USAGE(HID_USAGE_DESKTOP_JOYSTICK),                                                   \
+      HID_COLLECTION(HID_COLLECTION_APPLICATION), /* Report ID if any */                       \
+      __VA_ARGS__                                 /* 32 bit Button Map */                      \
+      HID_USAGE_PAGE(HID_USAGE_PAGE_BUTTON),                                                   \
+      HID_USAGE_MIN(1),                                                                        \
+      HID_USAGE_MAX(32),                                                                       \
+      HID_LOGICAL_MIN(0),                                                                      \
+      HID_LOGICAL_MAX(1),                                                                      \
+      HID_REPORT_COUNT(32),                                                                    \
+      HID_REPORT_SIZE(1),                                                                      \
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE), /* 8 bit DPad/Hat Button Map  */      \
+      HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),                                                  \
+      HID_USAGE(HID_USAGE_DESKTOP_HAT_SWITCH),                                                 \
+      HID_LOGICAL_MIN(0),                                                                      \
+      HID_LOGICAL_MAX(7),                                                                      \
+      HID_PHYSICAL_MIN(0),                                                                     \
+      HID_PHYSICAL_MAX_N(315, 2),                                                              \
+      HID_REPORT_COUNT(1),                                                                     \
+      HID_REPORT_SIZE(4),                                                                      \
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE), /* 8 bit DPad/Hat Button Map  */      \
+      HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),                                                  \
+      HID_USAGE(HID_USAGE_DESKTOP_HAT_SWITCH),                                                 \
+      HID_LOGICAL_MIN(0),                                                                      \
+      HID_LOGICAL_MAX(7),                                                                      \
+      HID_PHYSICAL_MIN(0),                                                                     \
+      HID_PHYSICAL_MAX_N(315, 2),                                                              \
+      HID_REPORT_COUNT(1),                                                                     \
+      HID_REPORT_SIZE(4),                                                                      \
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE), /* 16 bit X, Y (min 0, max 65535 ) */ \
+      HID_USAGE_PAGE(HID_USAGE_PAGE_DESKTOP),                                                  \
+      HID_USAGE(HID_USAGE_DESKTOP_X),                                                          \
+      HID_USAGE(HID_USAGE_DESKTOP_Y),                                                          \
+      HID_USAGE(HID_USAGE_DESKTOP_Z),                                                          \
+      HID_USAGE(HID_USAGE_DESKTOP_SLIDER),                                                     \
+      HID_LOGICAL_MIN(0x00),                                                                   \
+      HID_LOGICAL_MAX_N(0x0000ffff, 3),                                                        \
+      HID_REPORT_COUNT(4),                                                                     \
+      HID_REPORT_SIZE(16),                                                                     \
+      HID_INPUT(HID_DATA | HID_VARIABLE | HID_ABSOLUTE),                                       \
+      HID_COLLECTION_END
+
+  enum
+  {
+    REPORT_ID_KEYBOARD = 1,
+    REPORT_ID_MOUSE,
+    REPORT_ID_CONSUMER_CONTROL,
+    REPORT_ID_GAMEPAD,
+    REPORT_ID_COUNT
+  };
+
+#define JOYSTICK_DEFAULT_REPORT_ID 0x03
+#define JOYSTICK_DEFAULT_BUTTON_COUNT 32
+#define JOYSTICK_DEFAULT_AXIS_MINIMUM 0
+#define JOYSTICK_DEFAULT_AXIS_MAXIMUM 65535
+#define JOYSTICK_DEFAULT_SIMULATOR_MINIMUM 0
+#define JOYSTICK_DEFAULT_SIMULATOR_MAXIMUM 65535
+#define JOYSTICK_DEFAULT_HATSWITCH_COUNT 2
+#define JOYSTICK_HATSWITCH_COUNT_MAXIMUM 2
+#define JOYSTICK_HATSWITCH_RELEASE -1
+#define JOYSTICK_TYPE_JOYSTICK 0x04
+#define JOYSTICK_TYPE_GAMEPAD 0x05
+#define JOYSTICK_TYPE_MULTI_AXIS 0x08
+
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
+  typedef struct 
+  {
+    // Joystick State
+    int32_t _xAxis;
+    int32_t _yAxis;
+    int32_t _zAxis;
+    int32_t _slider;
+    int16_t _hatSwitchValues[JOYSTICK_HATSWITCH_COUNT_MAXIMUM];
+    uint8_t *_buttonValues;
+
+    // Joystick Settings
+    bool _autoSendState;
+    uint8_t _buttonCount;
+    uint8_t _buttonValuesArraySize;
+    uint8_t _hatSwitchCount;
+  } tm_joystick_t;
+
+  typedef struct TU_ATTR_PACKED
+  {
+    uint8_t buttons[4];
+    uint8_t hat[1];
+    uint8_t x[2];
+    uint8_t y[2];
+    uint8_t z[2];
+    uint8_t s[2];
+
+  } tm_joystick_report;
+
+  static tm_joystick_t tm_joystick;
+
+  int buildAndSet16BitValue(int32_t value, int32_t valueMinimum, int32_t valueMaximum, int32_t actualMinimum, int32_t actualMaximum, uint8_t dataLocation[]);
+  int buildAndSetAxisValue(int32_t axisValue, int32_t axisMinimum, int32_t axisMaximum, uint8_t dataLocation[]);
+  int buildAndSetSimulationValue(int32_t value, int32_t valueMinimum, int32_t valueMaximum, uint8_t dataLocation[]);
+
+  void tm_joystick_setup();
+
+  void begin(bool initAutoSendState);
+  void end();
+
+  // Set Axis Values
+  void tm_joystick_setXAxis(int32_t value);
+  void tm_joystick_setYAxis(int32_t value);
+  void tm_joystick_setZAxis(int32_t value);
+  void tm_joystick_setSliderAxis(int32_t value);
+
+  void tm_joystick_setButton(uint8_t button, uint8_t value);
+  void tm_joystick_pressButton(uint8_t button);
+  void tm_joystick_releaseButton(uint8_t button);
+
+  void tm_joystick_setHatSwitch(int8_t hatSwitch, int16_t value);
+
+  void tm_joystick_fill_report(tm_joystick_report *report);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* USB_DESCRIPTORS_H_ */

@@ -20,7 +20,8 @@ target_sources(tm16000_extender PUBLIC
 target_include_directories(tm16000_extender PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/display
-        ${CMAKE_CURRENT_LIST_DIR}/mlx90333)
+        ${CMAKE_CURRENT_LIST_DIR}/mlx90333
+        )
 
 # In addition to pico_stdlib required for common PicoSDK functionality, add dependency on tinyusb_device
 # for TinyUSB device support and tinyusb_board for the additional board support library used by the example

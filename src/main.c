@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org)
@@ -30,6 +30,8 @@
 #include "bsp/board.h"
 #include "tusb.h"
 
+#include "tusb_config.h"
+
 #include "usb_descriptors.h"
 #include "hardware/i2c.h"
 #include "pico/binary_info.h"
@@ -55,7 +57,6 @@ ssd1306_t disp;
 #define MLX_90333_SPI_PORT (spi1)
 mlx_90333_t hall_sensor;
 
-
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
 //--------------------------------------------------------------------+
@@ -65,7 +66,8 @@ mlx_90333_t hall_sensor;
  * - 1000 ms : device mounted
  * - 2500 ms : device is suspended
  */
-enum  {
+enum
+{
   BLINK_NOT_MOUNTED = 1000,
   BLINK_MOUNTED = 250,
   BLINK_SUSPENDED = 2500,
@@ -83,17 +85,18 @@ int main(void)
 {
   stdio_init_all();
   board_init();
-  tusb_init();
-  setup_display();
-  ssd1306_update_display(&disp, 10000u, 10000u, 100u);
   setup_hall_sensor();
+  tm_joystick_setup();
+  setup_display();
+  tusb_init();
+  ssd1306_update_display(&disp, 10000u, 10000u, 100u);
 
   while (1)
   {
     tud_task(); // tinyusb device task
     led_blinking_task();
 
-    hid_task();    
+    hid_task();
   }
 
   return 0;
@@ -102,20 +105,22 @@ int main(void)
 //--------------------------------------------------------------------+
 // SSD1306 display setup
 //--------------------------------------------------------------------+
-void setup_display(void) {
-    ssd1306_init(&disp, 128, 64, DISPLAY_ADDRESS, DISPLAY_I2C_INSTANCE, DISPLAY_SDA_PIN, DISPLAY_SCL_PIN);
-    bi_decl(bi_2pins_with_func(DISPLAY_SDA_PIN, DISPLAY_SCL_PIN, GPIO_FUNC_I2C))
+void setup_display(void)
+{
+  ssd1306_init(&disp, 128, 64, DISPLAY_ADDRESS, DISPLAY_I2C_INSTANCE, DISPLAY_SDA_PIN, DISPLAY_SCL_PIN);
+  bi_decl(bi_2pins_with_func(DISPLAY_SDA_PIN, DISPLAY_SCL_PIN, GPIO_FUNC_I2C))
 }
 
 //--------------------------------------------------------------------+
 // MLX90333 sensor
 //--------------------------------------------------------------------+
-void setup_hall_sensor(void) {
-    mlx90333_setup(&hall_sensor, MLX_90333_SPI_PORT, MLX_90333_PIN_MISO, MLX_90333_PIN_MOSI, MLX_90333_PIN_SCK, MLX_90333_PIN_CS);
-    // Make the SPI pins available to picotool
-    bi_decl(bi_3pins_with_func(MLX_90333_PIN_MISO, MLX_90333_PIN_MOSI, MLX_90333_PIN_SCK, GPIO_FUNC_SPI))
-    // Make the CS pin available to picotool
-    bi_decl(bi_1pin_with_name(MLX_90333_PIN_CS, "SPI CS"))
+void setup_hall_sensor(void)
+{
+  mlx90333_setup(&hall_sensor, MLX_90333_SPI_PORT, MLX_90333_PIN_MISO, MLX_90333_PIN_MOSI, MLX_90333_PIN_SCK, MLX_90333_PIN_CS);
+  // Make the SPI pins available to picotool
+  bi_decl(bi_3pins_with_func(MLX_90333_PIN_MISO, MLX_90333_PIN_MOSI, MLX_90333_PIN_SCK, GPIO_FUNC_SPI))
+      // Make the CS pin available to picotool
+      bi_decl(bi_1pin_with_name(MLX_90333_PIN_CS, "SPI CS"))
 }
 
 //--------------------------------------------------------------------+
@@ -139,7 +144,7 @@ void tud_umount_cb(void)
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
 void tud_suspend_cb(bool remote_wakeup_en)
 {
-  (void) remote_wakeup_en;
+  (void)remote_wakeup_en;
   blink_interval_ms = BLINK_SUSPENDED;
 }
 
@@ -153,182 +158,207 @@ void tud_resume_cb(void)
 // USB HID
 //--------------------------------------------------------------------+
 
-static void send_hid_report(uint8_t report_id, uint32_t btn)
+void send_hid_report(uint8_t testFunction)
 {
+  static uint32_t lastTestFunction = 0;
+  static uint8_t currentButton = 31;
+  static int16_t hat1Value = 0;
+  static int16_t hat2Value = 0;
+  static int32_t xValue = 0;
+  static int32_t yValue = 0;
+  static int32_t zValue = 0;
+  static int32_t sValue = 0;
+
   // skip if hid is not ready yet
-  if ( !tud_hid_ready() ) return;
-
-  switch(report_id)
+  if (!tud_hid_ready())
   {
-    case REPORT_ID_KEYBOARD:
-    {
-      // use to avoid send multiple consecutive zero report for keyboard
-      static bool has_keyboard_key = false;
-
-      if ( btn )
-      {
-        uint8_t keycode[6] = { 0 };
-        keycode[0] = HID_KEY_A;
-
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-        has_keyboard_key = true;
-      }else
-      {
-        // send empty key report if previously has key pressed
-        if (has_keyboard_key) tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-        has_keyboard_key = false;
-      }
-    }
-    break;
-
-    case REPORT_ID_MOUSE:
-    {
-      int8_t const delta = 5;
-
-      // no button, right + down, no scroll, no pan
-      tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, delta, delta, 0, 0);
-    }
-    break;
-
-    case REPORT_ID_CONSUMER_CONTROL:
-    {
-      // use to avoid send multiple consecutive zero report
-      static bool has_consumer_key = false;
-
-      if ( btn )
-      {
-        // volume down
-        uint16_t volume_down = HID_USAGE_CONSUMER_VOLUME_DECREMENT;
-        tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &volume_down, 2);
-        has_consumer_key = true;
-      }else
-      {
-        // send empty key report (release key) if previously has key pressed
-        uint16_t empty_key = 0;
-        if (has_consumer_key) tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &empty_key, 2);
-        has_consumer_key = false;
-      }
-    }
-    break;
-
-    case REPORT_ID_GAMEPAD:
-    {
-      // use to avoid send multiple consecutive zero report for keyboard
-      static bool has_gamepad_key = false;
-
-      hid_gamepad_report_t report =
-      {
-        .x   = 0, .y = 0, .z = 0, .rz = 0, .rx = 0, .ry = 0,
-        .hat = 0, .buttons = 0
-      };
-
-      if ( btn )
-      {
-        report.hat = GAMEPAD_HAT_UP;
-        report.buttons = GAMEPAD_BUTTON_A;
-        tud_hid_report(REPORT_ID_GAMEPAD, &report, sizeof(report));
-
-        has_gamepad_key = true;
-      }else
-      {
-        report.hat = GAMEPAD_HAT_CENTERED;
-        report.buttons = 0;
-        if (has_gamepad_key) tud_hid_report(REPORT_ID_GAMEPAD, &report, sizeof(report));
-        has_gamepad_key = false;
-      }
-    }
-    break;
-
-    default: break;
+    blink_interval_ms = 0;
+    return;
   }
+  blink_interval_ms = BLINK_MOUNTED;
+
+  tm_joystick_report report = {
+      .buttons = {0, 0, 0, 0},
+      .hat = {0x11},
+      .x = {125, 125},
+      .y = {0, 0},
+      .z = {0, 0},
+      .s = {0, 0}};
+  ssd1306_debug_values(&disp, testFunction, hat1Value);
+
+  switch (testFunction)
+  {
+  case 0: // buttons
+    if (lastTestFunction == 6)
+    {
+      tm_joystick_setSliderAxis(0);
+      lastTestFunction = 0;
+    }
+    tm_joystick_releaseButton(currentButton);
+    currentButton++;
+    if (currentButton > 31)
+    {
+      currentButton = 0;
+    }
+    tm_joystick_pressButton(currentButton);
+
+    break;
+  case 1: // hat 1
+    if (lastTestFunction == 0)
+    {
+      tm_joystick_releaseButton(currentButton);
+      lastTestFunction = 1;
+    }
+    tm_joystick_setHatSwitch(1, hat1Value * 45);
+    hat1Value++;
+    if (hat1Value > 7)
+    {
+      hat1Value = -1;
+    }
+    break;
+  case 2: // hat 2
+    if (lastTestFunction == 1)
+    {
+      tm_joystick_setHatSwitch(1, -1);
+      lastTestFunction = 2;
+    }
+    tm_joystick_setHatSwitch(2, hat2Value * 45);
+    hat2Value++;
+    if (hat2Value > 7)
+    {
+      hat2Value = -1;
+    }
+    break;
+  case 3: // x
+    if (lastTestFunction == 2)
+    {
+      tm_joystick_setHatSwitch(2, -1);
+      lastTestFunction = 3;
+    }
+    tm_joystick_setXAxis(xValue);
+    xValue += 0x0300;
+    if (xValue > 0xffff)
+    {
+      xValue = 0;
+    }
+    break;
+  case 4: // y
+    if (lastTestFunction == 3)
+    {
+      tm_joystick_setXAxis(0);
+      lastTestFunction = 4;
+    }
+    tm_joystick_setYAxis(yValue);
+    yValue += 0x0300;
+    if (yValue > 0xffff)
+    {
+      yValue = 0;
+    }
+    break;
+  case 5: // z
+    if (lastTestFunction == 4)
+    {
+      tm_joystick_setYAxis(0);
+      lastTestFunction = 5;
+    }
+    tm_joystick_setZAxis(zValue);
+    zValue += 68;
+    if (zValue > 4095)
+    {
+      zValue = 0;
+    }
+    break;
+  case 6: // s
+    if (lastTestFunction == 5)
+    {
+      tm_joystick_setZAxis(0);
+      lastTestFunction = 6;
+    }
+    tm_joystick_setSliderAxis(sValue);
+    sValue += 68;
+    if (sValue > 4095)
+    {
+      sValue = 0;
+    }
+    break;
+  default:
+    break;
+  }
+  tm_joystick_fill_report(&report);
+  tud_hid_report(0, &report, sizeof(report));
 }
 
 // Every 10ms, we will sent 1 report for each HID profile (keyboard, mouse etc ..)
 // tud_hid_report_complete_cb() is used to send the next report after previous one is complete
 void hid_task(void)
 {
-  // Poll every 10ms
-  const uint32_t interval_ms = 10;
+  // Poll every 500ms
+  static const uint32_t interval_ms = 500;
   static uint32_t start_ms = 0;
+  static uint8_t testFunction = 0;
 
-  if ( board_millis() - start_ms < interval_ms) return; // not enough time
+  if (board_millis() - start_ms < interval_ms)
+    return; // not enough time
   start_ms += interval_ms;
 
   uint32_t const btn = board_button_read();
 
   // Remote wakeup
-  if ( tud_suspended() && btn )
+  if (tud_suspended() && btn)
   {
     // Wake up host if we are in suspend mode
     // and REMOTE_WAKEUP feature is enabled by host
     tud_remote_wakeup();
-  }else
+  }
+  else
   {
+    if (btn)
+    {
+      testFunction++;
+      if (testFunction > 6)
+      {
+        testFunction = 0;
+      }
+    }
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
-    send_hid_report(REPORT_ID_KEYBOARD, btn);
+    send_hid_report(testFunction);
   }
 }
 
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
 // Note: For composite reports, report[0] is report ID
-void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t len)
+void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint8_t len)
 {
-  (void) instance;
-  (void) len;
-
-  uint8_t next_report_id = report[0] + 1;
-
-  if (next_report_id < REPORT_ID_COUNT)
-  {
-    send_hid_report(next_report_id, board_button_read());
-  }
+  (void)instance;
+  (void)len;
+  (void)report;
 }
 
 // Invoked when received GET_REPORT control request
 // Application must fill buffer report's content and return its length.
 // Return zero will cause the stack to STALL request
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
+uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
 {
   // TODO not Implemented
-  (void) instance;
-  (void) report_id;
-  (void) report_type;
-  (void) buffer;
-  (void) reqlen;
+  (void)instance;
+  (void)report_id;
+  (void)report_type;
+  (void)buffer;
+  (void)reqlen;
 
   return 0;
 }
 
 // Invoked when received SET_REPORT control request or
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
+void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize)
 {
-  (void) instance;
-
-  if (report_type == HID_REPORT_TYPE_OUTPUT)
-  {
-    // Set keyboard LED e.g Capslock, Numlock etc...
-    if (report_id == REPORT_ID_KEYBOARD)
-    {
-      // bufsize should be (at least) 1
-      if ( bufsize < 1 ) return;
-
-      uint8_t const kbd_leds = buffer[0];
-
-      if (kbd_leds & KEYBOARD_LED_CAPSLOCK)
-      {
-        // Capslock On: disable blink, turn led on
-        blink_interval_ms = 0;
-        board_led_write(true);
-      }else
-      {
-        // Caplocks Off: back to normal blink
-        board_led_write(false);
-        blink_interval_ms = BLINK_MOUNTED;
-      }
-    }
-  }
+  (void)instance;
+  (void)report_id;
+  (void)report_type;
+  (void)buffer;
+  (void)bufsize;
 }
 
 //--------------------------------------------------------------------+
@@ -340,10 +370,12 @@ void led_blinking_task(void)
   static bool led_state = false;
 
   // blink is disabled
-  if (!blink_interval_ms) return;
+  if (!blink_interval_ms)
+    return;
 
   // Blink every interval ms
-  if ( board_millis() - start_ms < blink_interval_ms) return; // not enough time
+  if (board_millis() - start_ms < blink_interval_ms)
+    return; // not enough time
   start_ms += blink_interval_ms;
 
   board_led_write(led_state);
