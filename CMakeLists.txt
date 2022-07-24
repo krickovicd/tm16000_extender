@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
+set(FAMILY rp2040)
+set(BOARD pico_sdk)
+set(TINYUSB_FAMILY_PROJECT_NAME_PREFIX "tinyusb_dev_")
 
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)

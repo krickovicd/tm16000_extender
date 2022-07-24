@@ -38,6 +38,8 @@
 #include "display/ssd1306.h"
 #include "mlx90333/mlx90333.h"
 
+#define TEST_USB_SETUP 0
+
 //--------------------------------------------------------------------+
 // Display hardware setup
 //--------------------------------------------------------------------+
@@ -74,6 +76,20 @@ enum
 };
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
+tm_joystick_report lastReport = {
+      .buttons = {0, 0, 0, 0},
+      .hat = {0x11},
+      .x = {0, 0},
+      .y = {0, 0},
+      .z = {0, 0},
+      .s = {0, 0}};
+tm_joystick_report newReport = {
+      .buttons = {0, 0, 0, 0},
+      .hat = {0x11},
+      .x = {0, 0},
+      .y = {0, 0},
+      .z = {0, 0},
+      .s = {0, 0}};
 
 void led_blinking_task(void);
 void hid_task(void);
@@ -158,7 +174,7 @@ void tud_resume_cb(void)
 // USB HID
 //--------------------------------------------------------------------+
 
-void send_hid_report(uint8_t testFunction)
+void send_test_report(uint8_t testFunction)
 {
   static uint32_t lastTestFunction = 0;
   static uint8_t currentButton = 31;
@@ -180,11 +196,10 @@ void send_hid_report(uint8_t testFunction)
   tm_joystick_report report = {
       .buttons = {0, 0, 0, 0},
       .hat = {0x11},
-      .x = {125, 125},
+      .x = {0, 0},
       .y = {0, 0},
       .z = {0, 0},
       .s = {0, 0}};
-  ssd1306_debug_values(&disp, testFunction, hat1Value);
 
   switch (testFunction)
   {
@@ -288,30 +303,103 @@ void send_hid_report(uint8_t testFunction)
   tud_hid_report(0, &report, sizeof(report));
 }
 
+void send_hid_report(tm_joystick_report* report)
+{
+  tud_hid_report(0, report, sizeof(*report));
+}
+
+bool reportsChanged(const tm_joystick_report* last_Report, const tm_joystick_report* new_Report)
+{
+  if(last_Report->buttons[0] != new_Report->buttons[0])
+  {
+    return true;
+  }
+  if(last_Report->buttons[1] != new_Report->buttons[1])
+  {
+    return true;
+  }
+  if(last_Report->buttons[2] != new_Report->buttons[2])
+  {
+    return true;
+  }
+  if(last_Report->buttons[3] != new_Report->buttons[3])
+  {
+    return true;
+  }
+  if(last_Report->hat[0] != new_Report->hat[0])
+  {
+    return true;
+  }
+  if(last_Report->s[0] != new_Report->s[0])
+  {
+    return true;
+  }
+  if(last_Report->s[1] != new_Report->s[1])
+  {
+    return true;
+  }
+  if(last_Report->x[0] != new_Report->x[0])
+  {
+    return true;
+  }
+  if(last_Report->x[1] != new_Report->x[1])
+  {
+    return true;
+  }
+  if(last_Report->y[0] != new_Report->y[0])
+  {
+    return true;
+  }
+  if(last_Report->y[1] != new_Report->y[1])
+  {
+    return true;
+  }
+  if(last_Report->z[0] != new_Report->z[0])
+  {
+    return true;
+  }
+  if(last_Report->z[1] != new_Report->z[1])
+  {
+    return true;
+  }
+
+  return false;
+}
+
+void copy_report_values(const tm_joystick_report* source, tm_joystick_report* destination)
+{
+  destination->buttons[0] = source->buttons[0];
+  destination->buttons[1] = source->buttons[1];
+  destination->buttons[2] = source->buttons[2];
+  destination->buttons[3] = source->buttons[3];
+  destination->hat[0] = source->hat[0];
+  destination->s[0] = source->s[0];
+  destination->s[1] = source->s[1];
+  destination->x[0] = source->x[0];
+  destination->x[1] = source->x[1];
+  destination->y[0] = source->y[0];
+  destination->y[1] = source->y[1];
+  destination->z[0] = source->z[0];
+  destination->z[1] = source->z[1];
+}
+
 // Every 10ms, we will sent 1 report for each HID profile (keyboard, mouse etc ..)
 // tud_hid_report_complete_cb() is used to send the next report after previous one is complete
 void hid_task(void)
 {
-  // Poll every 500ms
-  static const uint32_t interval_ms = 500;
+  // Poll every 10ms
+  static const uint32_t interval_ms = 10;
   static uint32_t start_ms = 0;
-  static uint8_t testFunction = 0;
 
   if (board_millis() - start_ms < interval_ms)
     return; // not enough time
   start_ms += interval_ms;
 
+  if (!tud_suspended())
+  {
+#if TEST_USB_SETUP > 0
+  static uint8_t testFunction = 0;
   uint32_t const btn = board_button_read();
-
-  // Remote wakeup
-  if (tud_suspended() && btn)
-  {
-    // Wake up host if we are in suspend mode
-    // and REMOTE_WAKEUP feature is enabled by host
-    tud_remote_wakeup();
-  }
-  else
-  {
     if (btn)
     {
       testFunction++;
@@ -321,9 +409,19 @@ void hid_task(void)
       }
     }
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
-    send_hid_report(testFunction);
+    send_test_report(testFunction);
+#else
+  tm_joystick_fill_report(&newReport);
+  if(reportsChanged(&lastReport, &newReport))
+  {
+    tud_hid_report(0, &newReport, sizeof(newReport));
+    copy_report_values(&newReport, &lastReport);
+  }
+  
+#endif    
   }
 }
+
 
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
