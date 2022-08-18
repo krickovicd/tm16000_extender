@@ -58,6 +58,7 @@ ssd1306_t disp;
 #define MLX_90333_PIN_CS 13
 #define MLX_90333_SPI_PORT (spi1)
 mlx_90333_t hall_sensor;
+mlx_90333_axis_data_t hall_sensor_data;
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -308,7 +309,7 @@ void send_hid_report(tm_joystick_report* report)
   tud_hid_report(0, report, sizeof(*report));
 }
 
-bool reportsChanged(const tm_joystick_report* last_Report, const tm_joystick_report* new_Report)
+bool reportDataChanged(const tm_joystick_report* last_Report, const tm_joystick_report* new_Report)
 {
   if(last_Report->buttons[0] != new_Report->buttons[0])
   {
@@ -411,8 +412,15 @@ void hid_task(void)
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
     send_test_report(testFunction);
 #else
+  //read hall sensor data
+  mlx90333_get_axis_data(&hall_sensor, &hall_sensor_data);
+  if(hall_sensor_data.valid)
+  {
+    tm_joystick_setXAxis(hall_sensor_data.x);
+    tm_joystick_setYAxis(hall_sensor_data.y);
+  }
   tm_joystick_fill_report(&newReport);
-  if(reportsChanged(&lastReport, &newReport))
+  if(reportDataChanged(&lastReport, &newReport))
   {
     tud_hid_report(0, &newReport, sizeof(newReport));
     copy_report_values(&newReport, &lastReport);

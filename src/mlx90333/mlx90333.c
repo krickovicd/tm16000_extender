@@ -44,8 +44,8 @@ void fill_data(const uint8_t buffer[8], mlx_90333_axis_data_t *data)
     data->x_msb = buffer[2];
     data->y_lsb = buffer[3];
     data->y_msb = buffer[4];
-    data->x = (int16_t)(buffer[2] << 8 | buffer[1]);
-    data->y = (int16_t)(buffer[4] << 8 | buffer[3]);
+    data->x = (uint16_t)(buffer[2] << 8 | buffer[1]);
+    data->y = (uint16_t)(buffer[4] << 8 | buffer[3]);
     data->valid = false;
     uint16_t checksum = 0;
     checksum += buffer[1];

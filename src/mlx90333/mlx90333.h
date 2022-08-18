@@ -25,8 +25,8 @@ typedef struct
     uint8_t x_msb;
     uint8_t y_lsb;
     uint8_t y_msb;
-    int16_t x;
-    int16_t y;
+    uint16_t x;
+    uint16_t y;
     bool valid;
 } mlx_90333_axis_data_t;
 
