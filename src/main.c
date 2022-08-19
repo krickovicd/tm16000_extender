@@ -78,19 +78,19 @@ enum
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 tm_joystick_report lastReport = {
-      .buttons = {0, 0, 0, 0},
-      .hat = {0x11},
-      .x = {0, 0},
-      .y = {0, 0},
-      .z = {0, 0},
-      .s = {0, 0}};
+    .buttons = {0, 0, 0, 0},
+    .hat = {0x11},
+    .x = {0, 0},
+    .y = {0, 0},
+    .z = {0, 0},
+    .s = {0, 0}};
 tm_joystick_report newReport = {
-      .buttons = {0, 0, 0, 0},
-      .hat = {0x11},
-      .x = {0, 0},
-      .y = {0, 0},
-      .z = {0, 0},
-      .s = {0, 0}};
+    .buttons = {0, 0, 0, 0},
+    .hat = {0x11},
+    .x = {0, 0},
+    .y = {0, 0},
+    .z = {0, 0},
+    .s = {0, 0}};
 
 void led_blinking_task(void);
 void hid_task(void);
@@ -185,14 +185,6 @@ void send_test_report(uint8_t testFunction)
   static int32_t yValue = 0;
   static int32_t zValue = 0;
   static int32_t sValue = 0;
-
-  // skip if hid is not ready yet
-  if (!tud_hid_ready())
-  {
-    blink_interval_ms = 0;
-    return;
-  }
-  blink_interval_ms = BLINK_MOUNTED;
 
   tm_joystick_report report = {
       .buttons = {0, 0, 0, 0},
@@ -304,62 +296,62 @@ void send_test_report(uint8_t testFunction)
   tud_hid_report(0, &report, sizeof(report));
 }
 
-void send_hid_report(tm_joystick_report* report)
+void send_hid_report(tm_joystick_report *report)
 {
   tud_hid_report(0, report, sizeof(*report));
 }
 
-bool reportDataChanged(const tm_joystick_report* last_Report, const tm_joystick_report* new_Report)
+bool reportDataChanged(const tm_joystick_report *last_Report, const tm_joystick_report *new_Report)
 {
-  if(last_Report->buttons[0] != new_Report->buttons[0])
+  if (last_Report->buttons[0] != new_Report->buttons[0])
   {
     return true;
   }
-  if(last_Report->buttons[1] != new_Report->buttons[1])
+  if (last_Report->buttons[1] != new_Report->buttons[1])
   {
     return true;
   }
-  if(last_Report->buttons[2] != new_Report->buttons[2])
+  if (last_Report->buttons[2] != new_Report->buttons[2])
   {
     return true;
   }
-  if(last_Report->buttons[3] != new_Report->buttons[3])
+  if (last_Report->buttons[3] != new_Report->buttons[3])
   {
     return true;
   }
-  if(last_Report->hat[0] != new_Report->hat[0])
+  if (last_Report->hat[0] != new_Report->hat[0])
   {
     return true;
   }
-  if(last_Report->s[0] != new_Report->s[0])
+  if (last_Report->s[0] != new_Report->s[0])
   {
     return true;
   }
-  if(last_Report->s[1] != new_Report->s[1])
+  if (last_Report->s[1] != new_Report->s[1])
   {
     return true;
   }
-  if(last_Report->x[0] != new_Report->x[0])
+  if (last_Report->x[0] != new_Report->x[0])
   {
     return true;
   }
-  if(last_Report->x[1] != new_Report->x[1])
+  if (last_Report->x[1] != new_Report->x[1])
   {
     return true;
   }
-  if(last_Report->y[0] != new_Report->y[0])
+  if (last_Report->y[0] != new_Report->y[0])
   {
     return true;
   }
-  if(last_Report->y[1] != new_Report->y[1])
+  if (last_Report->y[1] != new_Report->y[1])
   {
     return true;
   }
-  if(last_Report->z[0] != new_Report->z[0])
+  if (last_Report->z[0] != new_Report->z[0])
   {
     return true;
   }
-  if(last_Report->z[1] != new_Report->z[1])
+  if (last_Report->z[1] != new_Report->z[1])
   {
     return true;
   }
@@ -367,7 +359,7 @@ bool reportDataChanged(const tm_joystick_report* last_Report, const tm_joystick_
   return false;
 }
 
-void copy_report_values(const tm_joystick_report* source, tm_joystick_report* destination)
+void copy_report_values(const tm_joystick_report *source, tm_joystick_report *destination)
 {
   destination->buttons[0] = source->buttons[0];
   destination->buttons[1] = source->buttons[1];
@@ -398,9 +390,17 @@ void hid_task(void)
 
   if (!tud_suspended())
   {
+    // skip if hid is not ready yet
+    if (!tud_hid_ready())
+    {
+      blink_interval_ms = 0;
+      return;
+    }
+    blink_interval_ms = BLINK_MOUNTED;
+
 #if TEST_USB_SETUP > 0
-  static uint8_t testFunction = 0;
-  uint32_t const btn = board_button_read();
+    static uint8_t testFunction = 0;
+    uint32_t const btn = board_button_read();
     if (btn)
     {
       testFunction++;
@@ -412,24 +412,24 @@ void hid_task(void)
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
     send_test_report(testFunction);
 #else
-  //read hall sensor data
-  mlx90333_get_axis_data(&hall_sensor, &hall_sensor_data);
-  if(hall_sensor_data.valid)
-  {
-    tm_joystick_setXAxis(hall_sensor_data.x);
-    tm_joystick_setYAxis(hall_sensor_data.y);
-  }
-  tm_joystick_fill_report(&newReport);
-  if(reportDataChanged(&lastReport, &newReport))
-  {
-    tud_hid_report(0, &newReport, sizeof(newReport));
-    copy_report_values(&newReport, &lastReport);
-  }
-  
-#endif    
+    // read hall sensor data
+    mlx90333_get_axis_data(&hall_sensor, &hall_sensor_data);
+    if(hall_sensor_data.valid)
+    {
+      tm_joystick_setXAxis(hall_sensor_data.x);
+      tm_joystick_setYAxis(hall_sensor_data.y);
+    }
+
+    tm_joystick_fill_report(&newReport);
+
+    if(reportDataChanged(&lastReport, &newReport))
+    {
+      tud_hid_report(0, &newReport, sizeof(newReport));
+      copy_report_values(&newReport, &lastReport);
+    }
+#endif
   }
 }
-
 
 // Invoked when sent REPORT successfully to host
 // Application can use this to send the next report
