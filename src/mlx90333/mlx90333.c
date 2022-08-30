@@ -63,20 +63,19 @@ void fill_data(const uint8_t buffer[8], mlx_90333_axis_data_t *data)
 
 void mlx90333_get_axis_data(const mlx_90333_t *sensor, mlx_90333_axis_data_t *data)
 {
-    const uint8_t sendBuff = 0;
     uint8_t readBuff = 0;
     cs_select(sensor);
     sleep_ms(3);
-    spi_write_read_blocking(sensor->SPI_PORT, &sendBuff, &readBuff, 1);
+    spi_read_blocking(sensor->SPI_PORT, 0, &readBuff, 1);
     read_buffer[0] = readBuff;
     sleep_us(50);
-    spi_write_read_blocking(sensor->SPI_PORT, &sendBuff, &readBuff, 1);
+    spi_read_blocking(sensor->SPI_PORT, 0, &readBuff, 1);
     read_buffer[1] = readBuff;
     for (int i = 2; i < 8; i++)
     {
         sleep_us(20);
-        spi_write_read_blocking(sensor->SPI_PORT, &sendBuff, &readBuff, 1);
-        read_buffer[0] = readBuff;
+        spi_read_blocking(sensor->SPI_PORT, 0, &readBuff, 1);
+        read_buffer[i] = readBuff;
     }
     sleep_us(3);
     cs_deselect(sensor);

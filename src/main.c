@@ -422,10 +422,16 @@ void hid_task(void)
 
     tm_joystick_fill_report(&newReport);
 
-    if(reportDataChanged(&lastReport, &newReport))
+    //if(reportDataChanged(&lastReport, &newReport))
     {
       tud_hid_report(0, &newReport, sizeof(newReport));
       copy_report_values(&newReport, &lastReport);
+    }
+
+    ssd1306_update_display(&disp, hall_sensor_data.x, hall_sensor_data.y, newReport.z);
+    //ssd1306_debug_values(&disp, hall_sensor_data.x, hall_sensor_data.y, hall_sensor_data.valid);
+    if(!hall_sensor_data.valid){
+      sleep_ms(500);
     }
 #endif
   }

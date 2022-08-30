@@ -384,9 +384,9 @@ void ssd1306_update_display(ssd1306_t *p, uint16_t xPos, uint16_t yPos, uint16_t
     // y axis
     ssd1306_draw_line(p, 0, 31, 63, 31);
     // current jostick position
-    uint16_t x = map_range(xPos, 0, 65535, 0, 63);
+    uint16_t x = map_range(xPos, 65535, 0, 0, 63);
     uint16_t y = map_range(yPos, 0, 65535, 0, 63);
-    ssd1306_draw_circle(p, x, y, 3);
+    ssd1306_draw_circle(p, y, x, 3);
     
 
     // rudder
@@ -400,7 +400,7 @@ void ssd1306_update_display(ssd1306_t *p, uint16_t xPos, uint16_t yPos, uint16_t
     ssd1306_show(p); // Update screen with each newly-drawn line
 }
 
-void ssd1306_debug_values(ssd1306_t *p, int16_t x, int16_t y)
+void ssd1306_debug_values(ssd1306_t *p, uint16_t x, uint16_t y, bool valid)
 {
     ssd1306_clear(p);
     
@@ -409,5 +409,6 @@ void ssd1306_debug_values(ssd1306_t *p, int16_t x, int16_t y)
     ssd1306_draw_string(p, 10, 10, 1, str);
     sprintf(str, "%d", y);
     ssd1306_draw_string(p, 10, 20, 1, str);
+    ssd1306_draw_string(p, 10, 30, 1, valid ? "true" : "false");
     ssd1306_show(p);
 }

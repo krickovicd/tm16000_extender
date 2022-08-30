@@ -270,7 +270,7 @@ void ssd1306_update_display(ssd1306_t *p, uint16_t xPos, uint16_t yPos, uint16_t
 */
 void ssd1306_draw_circle(ssd1306_t *p, int16_t x0, int16_t y0, int16_t r);
 
-void ssd1306_debug_values(ssd1306_t *p, int16_t x, int16_t y);
+void ssd1306_debug_values(ssd1306_t *p, uint16_t x, uint16_t y, bool valid);
 
 #ifdef __cplusplus
 }

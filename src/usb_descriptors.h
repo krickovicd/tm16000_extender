@@ -106,11 +106,11 @@ extern "C"
   typedef struct 
   {
     // Joystick State
-    int32_t _xAxis;
-    int32_t _yAxis;
-    int32_t _zAxis;
-    int32_t _slider;
-    int16_t _hatSwitchValues[JOYSTICK_HATSWITCH_COUNT_MAXIMUM];
+    uint32_t _xAxis;
+    uint32_t _yAxis;
+    uint32_t _zAxis;
+    uint32_t _slider;
+    uint16_t _hatSwitchValues[JOYSTICK_HATSWITCH_COUNT_MAXIMUM];
     uint8_t *_buttonValues;
 
     // Joystick Settings
@@ -133,9 +133,9 @@ extern "C"
 
   static tm_joystick_t tm_joystick;
 
-  int buildAndSet16BitValue(int32_t value, int32_t valueMinimum, int32_t valueMaximum, int32_t actualMinimum, int32_t actualMaximum, uint8_t dataLocation[]);
-  int buildAndSetAxisValue(int32_t axisValue, int32_t axisMinimum, int32_t axisMaximum, uint8_t dataLocation[]);
-  int buildAndSetSimulationValue(int32_t value, int32_t valueMinimum, int32_t valueMaximum, uint8_t dataLocation[]);
+  uint32_t buildAndSet16BitValue(uint32_t value, uint32_t valueMinimum, uint32_t valueMaximum, uint32_t actualMinimum, uint32_t actualMaximum, uint8_t dataLocation[]);
+  uint32_t buildAndSetAxisValue(uint32_t axisValue, uint32_t axisMinimum, uint32_t axisMaximum, uint8_t dataLocation[]);
+  uint32_t buildAndSetSimulationValue(uint32_t value, uint32_t valueMinimum, uint32_t valueMaximum, uint8_t dataLocation[]);
 
   void tm_joystick_setup();
 
@@ -143,16 +143,16 @@ extern "C"
   void end();
 
   // Set Axis Values
-  void tm_joystick_setXAxis(int32_t value);
-  void tm_joystick_setYAxis(int32_t value);
-  void tm_joystick_setZAxis(int32_t value);
-  void tm_joystick_setSliderAxis(int32_t value);
+  void tm_joystick_setXAxis(uint32_t value);
+  void tm_joystick_setYAxis(uint32_t value);
+  void tm_joystick_setZAxis(uint32_t value);
+  void tm_joystick_setSliderAxis(uint32_t value);
 
   void tm_joystick_setButton(uint8_t button, uint8_t value);
   void tm_joystick_pressButton(uint8_t button);
   void tm_joystick_releaseButton(uint8_t button);
 
-  void tm_joystick_setHatSwitch(int8_t hatSwitch, int16_t value);
+  void tm_joystick_setHatSwitch(uint8_t hatSwitch, uint16_t value);
 
   void tm_joystick_fill_report(tm_joystick_report *report);
 

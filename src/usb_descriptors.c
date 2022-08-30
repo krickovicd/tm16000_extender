@@ -324,27 +324,27 @@ void tm_joystick_releaseButton(uint8_t button)
   bitClear(tm_joystick._buttonValues[index], bit);
 }
 
-void tm_joystick_setXAxis(int32_t value)
+void tm_joystick_setXAxis(uint32_t value)
 {
   tm_joystick._xAxis = value;
 }
 
-void tm_joystick_setYAxis(int32_t value)
+void tm_joystick_setYAxis(uint32_t value)
 {
   tm_joystick._yAxis = value;
 }
 
-void tm_joystick_setZAxis(int32_t value)
+void tm_joystick_setZAxis(uint32_t value)
 {
   tm_joystick._zAxis = value;
 }
 
-void tm_joystick_setSliderAxis(int32_t value)
+void tm_joystick_setSliderAxis(uint32_t value)
 {
   tm_joystick._slider = value;
 }
 
-void tm_joystick_setHatSwitch(int8_t hatSwitchIndex, int16_t value)
+void tm_joystick_setHatSwitch(uint8_t hatSwitchIndex, uint16_t value)
 {
   if (hatSwitchIndex >= JOYSTICK_DEFAULT_HATSWITCH_COUNT)
   {
@@ -354,13 +354,13 @@ void tm_joystick_setHatSwitch(int8_t hatSwitchIndex, int16_t value)
   tm_joystick._hatSwitchValues[hatSwitchIndex] = value;
 }
 
-int buildAndSet16BitValue(int32_t value, int32_t valueMinimum, int32_t valueMaximum, int32_t actualMinimum, int32_t actualMaximum, uint8_t dataLocation[])
+uint32_t buildAndSet16BitValue(uint32_t value, uint32_t valueMinimum, uint32_t valueMaximum, uint32_t actualMinimum, uint32_t actualMaximum, uint8_t dataLocation[])
 {
-  int32_t convertedValue;
+  uint32_t convertedValue;
   uint8_t highByte;
   uint8_t lowByte;
-  int32_t realMinimum = min(valueMinimum, valueMaximum);
-  int32_t realMaximum = max(valueMinimum, valueMaximum);
+  uint32_t realMinimum = min(valueMinimum, valueMaximum);
+  uint32_t realMaximum = max(valueMinimum, valueMaximum);
 
   if (value < realMinimum)
   {
@@ -388,7 +388,7 @@ int buildAndSet16BitValue(int32_t value, int32_t valueMinimum, int32_t valueMaxi
   return 2;
 }
 
-int buildAndSetAxisValue(int32_t axisValue, int32_t axisMinimum, int32_t axisMaximum, uint8_t dataLocation[])
+uint32_t buildAndSetAxisValue(uint32_t axisValue, uint32_t axisMinimum, uint32_t axisMaximum, uint8_t dataLocation[])
 {
   return buildAndSet16BitValue(axisValue, axisMinimum, axisMaximum, JOYSTICK_AXIS_MINIMUM, JOYSTICK_AXIS_MAXIMUM, dataLocation);
 }
